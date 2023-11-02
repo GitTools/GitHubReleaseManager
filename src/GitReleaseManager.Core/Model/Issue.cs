@@ -15,5 +15,7 @@ namespace GitReleaseManager.Core.Model
         public IReadOnlyList<Label> Labels { get; set; }
 
         public bool IsPullRequest { get; set; }
+
+        public User User { get; set; }
     }
 }

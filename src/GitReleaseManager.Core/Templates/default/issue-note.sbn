@@ -2,5 +2,5 @@
     if issue.is_pull_request
 }}- [__!{{ issue.public_number }}__]({{ issue.html_url }}) {{ issue.title }}
 {{  else
-}}- [__#{{ issue.public_number }}__]({{ issue.html_url }}) {{ issue.title }}
+}}- [__#{{ issue.public_number }}__]({{ issue.html_url }}) {{ issue.title }} raised by [{{ issue.user.login }}]({{ issue.user.html_url }})
 {{  end -}}

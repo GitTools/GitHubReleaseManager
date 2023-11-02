@@ -11,5 +11,10 @@ namespace GitReleaseManager.Core.Model
         /// Gets or sets details about the issue comment.
         /// </summary>
         public string Body { get; set; }
+
+        /// <summary>
+        /// Gets or sets information about the user who made the comment.
+        /// </summary>
+        public User User { get; set; }
     }
 }
