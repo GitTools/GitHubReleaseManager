@@ -55,15 +55,24 @@ namespace GitReleaseManager.IntegrationTests
         [Explicit]
         public async Task SingleMilestone()
         {
-            var fileSystem = new FileSystem(new CreateSubOptions());
-            var currentDirectory = Environment.CurrentDirectory;
-            var configuration = ConfigurationProvider.Provide(currentDirectory, fileSystem);
+            if (string.IsNullOrWhiteSpace(_token))
+            {
+                Assert.Inconclusive("Unable to locate credentials for accessing GitHub API");
+            }
+            else
+            {
+                var fileSystem = new FileSystem(new CreateSubOptions());
+                var currentDirectory = Environment.CurrentDirectory;
 
-            var vcsProvider = new GitHubProvider(_gitHubClient, _mapper);
-            var releaseNotesBuilder = new ReleaseNotesBuilder(vcsProvider, _logger, fileSystem, configuration, new TemplateFactory(fileSystem, configuration, TemplateKind.Create));
-            var result = await releaseNotesBuilder.BuildReleaseNotesAsync("Chocolatey", "ChocolateyGUI", "0.12.4", ReleaseTemplates.DEFAULT_NAME).ConfigureAwait(false);
-            Debug.WriteLine(result);
-            ClipBoardHelper.SetClipboard(result);
+                var configuration = ConfigurationProvider.Provide(currentDirectory, fileSystem);
+                configuration.IssueLabelsExclude.Add("Internal Refactoring"); // This is necessary to generate the release notes for GitReleaseManager version 0.12.0
+
+                var vcsProvider = new GitHubProvider(_gitHubClient, _mapper);
+                var releaseNotesBuilder = new ReleaseNotesBuilder(vcsProvider, _logger, fileSystem, configuration, new TemplateFactory(fileSystem, configuration, TemplateKind.Create));
+                var result = await releaseNotesBuilder.BuildReleaseNotesAsync("GitTools", "GitReleaseManager", "0.12.0", ReleaseTemplates.DEFAULT_NAME).ConfigureAwait(false); // 0.12.0 contains a mix of issues and PRs
+                Debug.WriteLine(result);
+                ClipBoardHelper.SetClipboard(result);
+            }
         }
 
         [Test]

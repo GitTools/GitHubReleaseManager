@@ -4,6 +4,7 @@
         include 'milestone'
     end
     include 'issues' | string.rstrip
+    include 'contributors'
     if template_kind == "CREATE"
         include 'create/footer'
     end

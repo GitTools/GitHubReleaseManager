@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using GitReleaseManager.Core.Configuration;
 using GitReleaseManager.Core.Exceptions;
+using GitReleaseManager.Core.Extensions;
 using GitReleaseManager.Core.Helpers;
 using GitReleaseManager.Core.Model;
 using GitReleaseManager.Core.Provider;
@@ -66,12 +67,19 @@ namespace GitReleaseManager.Core.ReleaseNotes
 
             var commitsLink = _vcsProvider.GetCommitsUrl(_user, _repository, _targetMilestone?.Title, previousMilestone?.Title);
 
-            foreach (var issue in issues)
+            var issuesDict = GetIssuesDict(issues);
+
+            // The call to GetIssuesDict above will filter out the issues that are not taged with one of the configured tags.
+            // Therefore it's more efficient to fetch the linked issues AFTER GetIssuesDict has been invoked.
+            foreach (var kvp in issuesDict)
             {
-                issue.LinkedIssue = await _vcsProvider.GetLinkedIssueAsync(_user, _repository, issue.Number).ConfigureAwait(false);
+                foreach (var issue in kvp.Value)
+                {
+                    issue.LinkedIssue = await _vcsProvider.GetLinkedIssueAsync(_user, _repository, issue.Number).ConfigureAwait(false);
+                }
             }
 
-            var issuesDict = GetIssuesDict(issues);
+            var contributors = GetContributors(issues);
 
             var milestoneQueryString = _vcsProvider.GetMilestoneQueryString();
 
@@ -81,6 +89,11 @@ namespace GitReleaseManager.Core.ReleaseNotes
                 {
                     issues.Count,
                     Items = issuesDict,
+                },
+                Contributors = new
+                {
+                    Count = contributors.Count,
+                    Items = contributors,
                 },
                 Commits = new
                 {
@@ -117,6 +130,18 @@ namespace GitReleaseManager.Core.ReleaseNotes
                 .ToDictionary(o => GetValidLabel(o.Key, o.Count()), o => o.OrderBy(issue => issue.PublicNumber).ToList());
 
             return issuesByLabel;
+        }
+
+        private static List<User> GetContributors(List<Issue> issues)
+        {
+            var contributors = issues
+                .Select(i => i.User)
+                .Union(issues.Select(i => i.LinkedIssue?.User))
+                .Where(u => u != null)
+                .DistinctBy(u => u.Login)
+                .ToList();
+
+            return contributors;
         }
 
         private string GetValidLabel(string label, int issuesCount)
