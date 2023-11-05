@@ -2,5 +2,5 @@
     if issue.is_pull_request
 }}- [__!{{ issue.public_number }}__]({{ issue.html_url }}) {{ issue.title }}
 {{  else
-}}- [__#{{ issue.public_number }}__]({{ issue.html_url }}) {{ issue.title }} raised by [{{ issue.user.login }}]({{ issue.user.html_url }})
+}}- [__#{{ issue.public_number }}__]({{ issue.html_url }}) {{ issue.title }} raised by [{{ issue.user.login }}]({{ issue.user.html_url }}) {{ if issue.linked_issue != null }} resolved in [#{{ issue.linked_issue.number }}]({{ issue.linked_issue.html_url }}) by [{{ issue.linked_issue.user.login }}]({{ issue.linked_issue.user.html_url }}){{ end }}
 {{  end -}}

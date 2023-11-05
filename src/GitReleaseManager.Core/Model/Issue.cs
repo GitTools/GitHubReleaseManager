@@ -17,5 +17,7 @@ namespace GitReleaseManager.Core.Model
         public bool IsPullRequest { get; set; }
 
         public User User { get; set; }
+
+        public Issue LinkedIssue { get; set; }
     }
 }

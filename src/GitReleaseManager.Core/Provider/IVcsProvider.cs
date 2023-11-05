@@ -49,5 +49,7 @@ namespace GitReleaseManager.Core.Provider
         string GetMilestoneQueryString();
 
         string GetIssueType(Issue issue);
+
+        Task<Issue> GetLinkedIssueAsync(string owner, string repository, int issueNumber);
     }
 }

@@ -66,6 +66,11 @@ namespace GitReleaseManager.Core.ReleaseNotes
 
             var commitsLink = _vcsProvider.GetCommitsUrl(_user, _repository, _targetMilestone?.Title, previousMilestone?.Title);
 
+            foreach (var issue in issues)
+            {
+                issue.LinkedIssue = await _vcsProvider.GetLinkedIssueAsync(_user, _repository, issue.Number).ConfigureAwait(false);
+            }
+
             var issuesDict = GetIssuesDict(issues);
 
             var milestoneQueryString = _vcsProvider.GetMilestoneQueryString();
