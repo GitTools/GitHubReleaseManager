@@ -85,7 +85,11 @@ query ConnectAndDisconnectEvents($repoName: String!, $repoOwner: String!, $issue
             _mapper = mapper;
 
             var graphQLClient = new GraphQLHttpClient(new GraphQLHttpClientOptions { EndPoint = new Uri("https://api.github.com/graphql") }, new SystemTextJsonSerializer());
-            graphQLClient.HttpClient.DefaultRequestHeaders.Add("Authorization", $"bearer {_gitHubClient.Connection.Credentials.Password}");
+            if (!string.IsNullOrEmpty(_gitHubClient?.Connection?.Credentials?.Password))
+            {
+                graphQLClient.HttpClient.DefaultRequestHeaders.Add("Authorization", $"bearer {_gitHubClient.Connection.Credentials.Password}");
+            }
+
             _graphQLClient = graphQLClient;
         }
 
