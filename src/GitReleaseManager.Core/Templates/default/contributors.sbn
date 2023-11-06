@@ -7,4 +7,3 @@ __Contributors__
 {{ for contributor in contributors.items
     include 'contributor-details'
 end }}
-
