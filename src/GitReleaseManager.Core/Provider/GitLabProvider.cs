@@ -391,6 +391,12 @@ namespace GitReleaseManager.Core.Provider
             return issue.IsPullRequest ? "Merge Request" : "Issue";
         }
 
+        public async Task<Issue> GetLinkedIssueAsync(string owner, string repository, int issueNumber)
+        {
+            // This is a placeholder until I figure out if GitLab has a something equivalent to GitHub's "linked issue"
+            throw new NotImplementedException();
+        }
+
         private long GetGitLabProjectId(string owner, string repository)
         {
             if (_projectId.HasValue)

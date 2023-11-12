@@ -75,7 +75,7 @@ namespace GitReleaseManager.Core.ReleaseNotes
             {
                 foreach (var issue in kvp.Value)
                 {
-                    issue.LinkedIssue = await _vcsProvider.GetLinkedIssueAsync(_user, _repository, issue.Number).ConfigureAwait(false);
+                    issue.LinkedIssue = await _vcsProvider.GetLinkedIssueAsync(_user, _repository, issue.PublicNumber).ConfigureAwait(false);
                 }
             }
 

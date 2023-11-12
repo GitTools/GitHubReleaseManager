@@ -107,11 +107,11 @@ namespace GitReleaseManager.IntegrationTests
         {
             // Assert that issue 43 is linked to pull request 108
             var result1 = await _gitHubProvider.GetLinkedIssueAsync("jericho", "_testing", 43).ConfigureAwait(false);
-            Assert.AreEqual(108, result1.Number);
+            Assert.AreEqual(108, result1.PublicNumber);
 
             // Assert that pull request 108 is linked to issue 43
             var result2 = await _gitHubProvider.GetLinkedIssueAsync("jericho", "_testing", 108).ConfigureAwait(false);
-            Assert.AreEqual(43, result2.Number);
+            Assert.AreEqual(43, result2.PublicNumber);
         }
     }
 }
