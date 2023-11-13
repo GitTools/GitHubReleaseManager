@@ -133,16 +133,18 @@ namespace GitReleaseManager.Core.ReleaseNotes
             return issuesByLabel;
         }
 
-        private static List<User> GetContributors(List<Issue> issues)
+        private static List<User> GetContributors(IEnumerable<Issue> issues)
         {
-            var contributors = issues
-                .Select(i => i.User)
-                .Union(issues.Select(i => i.LinkedIssue?.User))
+            var contributors = issues.Select(i => i.User);
+            var linkedContributors = issues.SelectMany(i => i.LinkedIssues).Select(i => i.User);
+
+            var allContributors = contributors
+                .Union(linkedContributors)
                 .Where(u => u != null)
                 .DistinctBy(u => u.Login)
                 .ToList();
 
-            return contributors;
+            return allContributors;
         }
 
         private string GetValidLabel(string label, int issuesCount)
