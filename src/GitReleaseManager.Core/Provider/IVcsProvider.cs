@@ -50,6 +50,6 @@ namespace GitReleaseManager.Core.Provider
 
         string GetIssueType(Issue issue);
 
-        Task<Issue> GetLinkedIssueAsync(string owner, string repository, int issueNumber);
+        Task<IEnumerable<Issue>> GetLinkedIssuesAsync(string owner, string repository, Issue issue);
     }
 }

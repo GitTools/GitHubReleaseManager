@@ -62,6 +62,29 @@ namespace GitReleaseManager.Core.Provider
 					}}
 					...on DisconnectedEvent {{
 						createdAt,
+						id,
+						source {{
+							__typename,
+							... on Issue {{
+  								number
+							}}
+							... on PullRequest {{
+  								number,
+                                author {{
+                                    avatarUrl,
+                                    resourcePath,
+                                }}
+							}}
+						}},
+						subject {{
+							__typename 
+							... on Issue {{
+  								number
+							}}
+							... on PullRequest {{
+  								number
+							}}
+						}}
 					}}
 				}}
 			}}
@@ -414,7 +437,7 @@ query ConnectAndDisconnectEvents($repoName: String!, $repoOwner: String!, $issue
             return issue.IsPullRequest ? "Pull Request" : "Issue";
         }
 
-        public async Task<Issue> GetLinkedIssueAsync(string owner, string repository, int issueNumber)
+        public async Task<IEnumerable<Issue>> GetLinkedIssuesAsync(string owner, string repository, Issue issue)
         {
             var graphQLQuery = string.Format(CultureInfo.InvariantCulture, CONNECT_AND_DISCONNECT_EVENTS_GRAPHQL_QUERY,
                     string.Format(CultureInfo.InvariantCulture, CONNECT_AND_DISCONNECT_EVENTS_GRAPHQL_QUERY_FRAGMENT, "issue"),
@@ -428,7 +451,7 @@ query ConnectAndDisconnectEvents($repoName: String!, $repoOwner: String!, $issue
                     pageSize = PAGE_SIZE,
                     repoName = repository,
                     repoOwner = owner,
-                    issueNumber = issueNumber,
+                    issueNumber = issue.PublicNumber,
                 },
             };
 
@@ -443,41 +466,45 @@ query ConnectAndDisconnectEvents($repoName: String!, $repoOwner: String!, $issue
 
             if (issueNode.ValueKind == JsonValueKind.Null || issueNode.ValueKind == JsonValueKind.Undefined)
             {
-                throw new NotFoundException($"Unable to find issue/pull request {issueNumber}");
+                throw new NotFoundException($"Unable to find issue/pull request {issue.PublicNumber}");
             }
 
             var nodes = issueNode.GetJsonElement("timelineItems.nodes");
-            var sortedNodes = nodes.EnumerateArray().OrderByDescending(n => n.GetJsonElement("createdAt").GetDateTime());
-            var mostRecentConnectedEvent = sortedNodes.FirstOrDefault(n => n.GetJsonElement("__typename").GetString() == "ConnectedEvent");
-            var mostRecentDisconnectedEvent = sortedNodes.FirstOrDefault(n => n.GetJsonElement("__typename").GetString() == "DisconnectedEvent");
+            var sortedNodes = nodes.EnumerateArray().OrderBy(n => n.GetJsonElement("createdAt").GetDateTime());
+            var connectedEvents = sortedNodes.Where(n => n.GetJsonElement("__typename").GetString() == "ConnectedEvent").ToArray();
+            var disconnectedEvents = sortedNodes.Where(n => n.GetJsonElement("__typename").GetString() == "DisconnectedEvent").ToArray();
 
-            // Make sure we found an event that indicates that an issue/PR was linked to this issue/PR
-            if (mostRecentConnectedEvent.ValueKind == JsonValueKind.Null || mostRecentConnectedEvent.ValueKind == JsonValueKind.Undefined)
+            if (!connectedEvents.Any())
             {
-                return null;
+                return Enumerable.Empty<Issue>();
             }
 
-            // We found an event indicating that an issue was linked. Make sure it wasn't un-linked
-            else if (mostRecentDisconnectedEvent.ValueKind == JsonValueKind.Null || mostRecentDisconnectedEvent.ValueKind == JsonValueKind.Undefined)
+            var linkedIssues = new List<Issue>();
+            foreach (var connectEvent in connectedEvents)
             {
-                var linkedIssueNumber = mostRecentConnectedEvent.GetJsonElement("subject.number").GetInt32();
-                var issue = await _gitHubClient.Issue.Get(owner, repository, linkedIssueNumber).ConfigureAwait(false);
-                return _mapper.Map<Issue>(issue);
+                var linkedIssueNumber = connectEvent.GetJsonElement("subject.number").GetInt32();
+                var correspondingDisconnectEvent = disconnectedEvents
+                    .FirstOrDefault(e =>
+                        e.GetJsonElement("subject.number").GetInt32() == linkedIssueNumber &&
+                        e.GetJsonElement("createdAt").GetDateTime() >= connectEvent.GetJsonElement("createdAt").GetDateTime());
+
+                if (correspondingDisconnectEvent.ValueKind == JsonValueKind.Null || correspondingDisconnectEvent.ValueKind == JsonValueKind.Undefined)
+                {
+                    var linkedIssue = await _gitHubClient.Issue.Get(owner, repository, linkedIssueNumber).ConfigureAwait(false);
+                    linkedIssues.Add(_mapper.Map<Issue>(linkedIssue));
+                }
+                else if (correspondingDisconnectEvent.GetJsonElement("createdAt").GetDateTime() >= connectEvent.GetJsonElement("createdAt").GetDateTime())
+                {
+                    continue;
+                }
+                else
+                {
+                    var linkedIssue = await _gitHubClient.Issue.Get(owner, repository, linkedIssueNumber).ConfigureAwait(false);
+                    linkedIssues.Add(_mapper.Map<Issue>(linkedIssue));
+                }
             }
 
-            // We found a linked issue and a disconnection event. Check which one is the most recent
-            else if (mostRecentDisconnectedEvent.GetJsonElement("createdAt").GetDateTime() >= mostRecentConnectedEvent.GetJsonElement("createdAt").GetDateTime())
-            {
-                return null;
-            }
-
-            // We found an event indicating that an issue was linked and we determined that it is more recent than any of the "un-link" events
-            else
-            {
-                var linkedIssueNumber = mostRecentConnectedEvent.GetJsonElement("subject.number").GetInt32();
-                var issue = await _gitHubClient.Issue.Get(owner, repository, linkedIssueNumber).ConfigureAwait(false);
-                return _mapper.Map<Issue>(issue);
-            }
+            return linkedIssues;
         }
 
         private static async Task ExecuteAsync(Func<Task> action)

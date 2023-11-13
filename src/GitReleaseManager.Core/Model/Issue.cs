@@ -18,6 +18,6 @@ namespace GitReleaseManager.Core.Model
 
         public User User { get; set; }
 
-        public Issue LinkedIssue { get; set; }
+        public IReadOnlyList<Issue> LinkedIssues { get; set; }
     }
 }
