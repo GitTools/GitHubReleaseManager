@@ -1,6 +1,45 @@
 {{
-    if issue.is_pull_request
-}}- [__!{{ issue.public_number }}__]({{ issue.html_url }}) {{ issue.title }}{{ if issue.user }} by [{{ issue.user.login }}]({{ issue.user.html_url }}){{ end }}{{ if issue.linked_issue }} raised in [#{{ issue.linked_issue.public_number }}]({{ issue.linked_issue.html_url }}) by [{{ issue.linked_issue.user.login }}]({{ issue.linked_issue.user.html_url }}){{ end }}
-{{  else
-}}- [__#{{ issue.public_number }}__]({{ issue.html_url }}) {{ issue.title }}{{ if issue.user }} raised by [{{ issue.user.login }}]({{ issue.user.html_url }}){{ end }}{{ if issue.linked_issue != null }} resolved in [#{{ issue.linked_issue.number }}]({{ issue.linked_issue.html_url }}) by [{{ issue.linked_issue.user.login }}]({{ issue.linked_issue.user.html_url }}){{ end }}
-{{  end -}}
+func IssueDescription
+    if $0.is_pull_request
+        $description = "[__!" + $0.public_number + "__]"
+    else
+        $description = "[__#" + $0.public_number + "__]"
+    end
+    $description = $description + "(" + $0.html_url + ")"
+    if $1
+        $description = $description + " " + $0.title
+    end
+    if $0.user
+        $description = $description + " by [" + $0.user.login + "](" + $0.user.html_url + ")"
+    end
+    if $0.linked_issues
+        $description = $description + LinkedIssuesDescription($0.linked_issues)
+    end
+    ret $description
+end
+func LinkedIssuesDescription
+    $countPRs = 0
+    $countIssues = 0
+    for linkedIssue in $0
+        if linkedIssue.is_pull_request
+            if $countPRs == 0
+                $resolvedBy = " resolved by "
+            else
+                $resolvedBy = $resolvedBy + ", "
+            end
+            $resolvedBy = $resolvedBy + IssueDescription(linkedIssue, false)
+            ++ $countPRs
+        else
+            if $countIssues == 0
+                $raisedIn = " raised in "
+            else
+                $raisedIn = $raisedIn + ", "
+            end
+            $raisedIn = $raisedIn + IssueDescription(linkedIssue, false)
+            ++ $countIssues
+        end
+    end
+    ret $raisedIn + $resolvedBy
+end
+}}
+- {{ IssueDescription(issue, true) }}
