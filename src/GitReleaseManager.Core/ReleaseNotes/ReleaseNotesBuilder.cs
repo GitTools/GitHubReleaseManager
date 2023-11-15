@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using GitReleaseManager.Core.Configuration;
 using GitReleaseManager.Core.Exceptions;
-using GitReleaseManager.Core.Extensions;
 using GitReleaseManager.Core.Helpers;
 using GitReleaseManager.Core.Model;
 using GitReleaseManager.Core.Provider;
@@ -68,19 +67,15 @@ namespace GitReleaseManager.Core.ReleaseNotes
             var commitsLink = _vcsProvider.GetCommitsUrl(_user, _repository, _targetMilestone?.Title, previousMilestone?.Title);
 
             var issuesDict = GetIssuesDict(issues);
+            var distinctValidIssues = issuesDict.SelectMany(kvp => kvp.Value).DistinctBy(i => i.PublicNumber);
 
-            // The call to GetIssuesDict above will filter out the issues that are not taged with one of the configured tags.
-            // Therefore it's more efficient to fetch the linked issues AFTER GetIssuesDict has been invoked.
-            foreach (var kvp in issuesDict)
+            foreach (var issue in distinctValidIssues)
             {
-                foreach (var issue in kvp.Value)
-                {
-                    var linkedIssues = await _vcsProvider.GetLinkedIssuesAsync(_user, _repository, issue).ConfigureAwait(false);
-                    issue.LinkedIssues = linkedIssues?.ToList().AsReadOnly() ?? Array.AsReadOnly(Array.Empty<Issue>());
-                }
+                var linkedIssues = await _vcsProvider.GetLinkedIssuesAsync(_user, _repository, issue).ConfigureAwait(false);
+                issue.LinkedIssues = linkedIssues?.ToList().AsReadOnly() ?? Array.AsReadOnly(Array.Empty<Issue>());
             }
 
-            var contributors = GetContributors(issues);
+            var contributors = GetContributors(distinctValidIssues);
 
             var milestoneQueryString = _vcsProvider.GetMilestoneQueryString();
 
