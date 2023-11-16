@@ -28,7 +28,7 @@ func LinkedIssuesDescription
                 $resolvedBy = $resolvedBy + ", "
             end
             $resolvedBy = $resolvedBy + IssueDescription(linkedIssue, false)
-            ++ $countPRs
+            $countPRs = $countPRs + 1
         else
             if $countIssues == 0
                 $raisedIn = " raised in "
@@ -36,7 +36,7 @@ func LinkedIssuesDescription
                 $raisedIn = $raisedIn + ", "
             end
             $raisedIn = $raisedIn + IssueDescription(linkedIssue, false)
-            ++ $countIssues
+            $countIssues = $countIssues + 1
         end
     end
     ret $raisedIn + $resolvedBy
