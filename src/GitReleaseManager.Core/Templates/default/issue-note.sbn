@@ -23,7 +23,7 @@ func LinkedIssuesDescription
     for linkedIssue in $0
         if linkedIssue.is_pull_request
             if $countPRs == 0
-                $resolvedBy = " resolved by "
+                $resolvedBy = " resolved in "
             else
                 $resolvedBy = $resolvedBy + ", "
             end
