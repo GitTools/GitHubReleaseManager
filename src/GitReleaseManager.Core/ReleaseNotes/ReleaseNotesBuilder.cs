@@ -75,7 +75,7 @@ namespace GitReleaseManager.Core.ReleaseNotes
                 issue.LinkedIssues = linkedIssues?.ToList().AsReadOnly() ?? Array.AsReadOnly(Array.Empty<Issue>());
             }
 
-            var contributors = GetContributors(distinctValidIssues);
+            var contributors = _configuration.Create.IncludeContributors ? GetContributors(distinctValidIssues) : Enumerable.Empty<User>();
 
             var milestoneQueryString = _vcsProvider.GetMilestoneQueryString();
 
@@ -88,7 +88,7 @@ namespace GitReleaseManager.Core.ReleaseNotes
                 },
                 Contributors = new
                 {
-                    Count = contributors.Count,
+                    Count = contributors.Count(),
                     Items = contributors,
                 },
                 Commits = new
