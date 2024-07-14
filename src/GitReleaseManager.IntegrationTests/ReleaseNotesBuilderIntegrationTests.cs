@@ -67,9 +67,17 @@ namespace GitReleaseManager.IntegrationTests
                 var configuration = ConfigurationProvider.Provide(currentDirectory, fileSystem);
                 configuration.IssueLabelsExclude.Add("Internal Refactoring"); // This is necessary to generate the release notes for GitReleaseManager version 0.12.0
 
+                // Indicate whether you want to include the 'Contributors' section in the release notes
+                configuration.Create.IncludeContributors = true;
+
+                // Pick the template based on whether you want to include the 'Contributors' section in the release notes
+                var templatePath = configuration.Create.IncludeContributors
+                    ? ReleaseTemplates.CONTRIBUTORS_NAME
+                    : ReleaseTemplates.DEFAULT_NAME;
+
                 var vcsProvider = new GitHubProvider(_gitHubClient, _mapper);
                 var releaseNotesBuilder = new ReleaseNotesBuilder(vcsProvider, _logger, fileSystem, configuration, new TemplateFactory(fileSystem, configuration, TemplateKind.Create));
-                var result = await releaseNotesBuilder.BuildReleaseNotesAsync("GitTools", "GitReleaseManager", "0.12.0", ReleaseTemplates.DEFAULT_NAME).ConfigureAwait(false); // 0.12.0 contains a mix of issues and PRs
+                var result = await releaseNotesBuilder.BuildReleaseNotesAsync("GitTools", "GitReleaseManager", "0.12.0", templatePath).ConfigureAwait(false); // 0.12.0 contains a mix of issues and PRs
                 Debug.WriteLine(result);
                 ClipBoardHelper.SetClipboard(result);
             }
