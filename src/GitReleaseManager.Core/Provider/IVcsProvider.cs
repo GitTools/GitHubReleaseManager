@@ -16,7 +16,7 @@ namespace GitReleaseManager.Core.Provider
 
         Task CreateIssueCommentAsync(string owner, string repository, Issue issue, string comment);
 
-        Task<IEnumerable<Issue>> GetIssuesAsync(string owner, string repository, Milestone milstone, ItemStateFilter itemStateFilter = ItemStateFilter.All);
+        Task<IEnumerable<Issue>> GetIssuesAsync(string owner, string repository, Milestone milestone, ItemStateFilter itemStateFilter = ItemStateFilter.All);
 
         Task<IEnumerable<IssueComment>> GetIssueCommentsAsync(string owner, string repository, Issue issue);
 
