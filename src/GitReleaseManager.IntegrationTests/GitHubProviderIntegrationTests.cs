@@ -33,7 +33,7 @@ namespace GitReleaseManager.IntegrationTests
         [OneTimeSetUp]
         public void OneTimeSetUp()
         {
-            _token = Environment.GetEnvironmentVariable("GITTOOLS_GITHUB_TOKEN");
+            _token = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
 
             if (string.IsNullOrWhiteSpace(_token))
             {
@@ -105,18 +105,26 @@ namespace GitReleaseManager.IntegrationTests
         [Test]
         public async Task GetLinkedIssues()
         {
-            // Assert that pull request 43 is linked to issues 107 and 108
+            // Assert that issue 113 in the GitTools/GitReleaseManager repo is linked to pull request 369
+            var result0 = await _gitHubProvider.GetLinkedIssuesAsync("GitTools", "GitReleaseManager", new Issue() { PublicNumber = 113 }).ConfigureAwait(false);
+            Assert.That(result0, Is.Not.Null);
+            Assert.That(result0.Count(), Is.EqualTo(1));
+            Assert.That(result0.Count(r => r.PublicNumber == 369), Is.EqualTo(1));
+
+            // Assert that pull request 43 in the jericho/_testing repo is linked to issues 107 and 108
             var result1 = await _gitHubProvider.GetLinkedIssuesAsync("jericho", "_testing", new Issue() { PublicNumber = 43 }).ConfigureAwait(false);
             Assert.That(result1, Is.Not.Null);
             Assert.That(result1.Count(), Is.EqualTo(2));
             Assert.That(result1.Count(r => r.PublicNumber == 107), Is.EqualTo(1));
             Assert.That(result1.Count(r => r.PublicNumber == 108), Is.EqualTo(1));
 
-            // Assert that issue 108 is linked to pull request 43
+            // Assert that issue 108 in the jericho/_testing repo is linked to pull request 7, 43 and 109
             var result2 = await _gitHubProvider.GetLinkedIssuesAsync("jericho", "_testing", new Issue() { PublicNumber = 108 }).ConfigureAwait(false);
             Assert.That(result2, Is.Not.Null);
-            Assert.That(result2.Count(), Is.EqualTo(1));
+            Assert.That(result2.Count(), Is.EqualTo(3));
+            Assert.That(result2.Count(r => r.PublicNumber == 7), Is.EqualTo(1));
             Assert.That(result2.Count(r => r.PublicNumber == 43), Is.EqualTo(1));
+            Assert.That(result2.Count(r => r.PublicNumber == 109), Is.EqualTo(1));
         }
     }
 }

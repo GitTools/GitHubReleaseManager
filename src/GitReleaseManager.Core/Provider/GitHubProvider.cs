@@ -33,70 +33,56 @@ namespace GitReleaseManager.Core.Provider
 
         // This query fragment will be executed for issues and pull requests
         // because we don't know whether issueNumber refers to an issue or a PR
-        private const string CONNECT_AND_DISCONNECT_EVENTS_GRAPHQL_QUERY_FRAGMENT = @"
-		{0}(number: $issueNumber) {{
-			timelineItems(first: $pageSize, itemTypes: [CONNECTED_EVENT, DISCONNECTED_EVENT]) {{
-				nodes {{
-					__typename,
-					...on ConnectedEvent {{
-						createdAt,
-						id,
-						source {{
-							__typename,
-							... on Issue {{
-  								number
-							}}
-							... on PullRequest {{
-  								number
-							}}
-						}},
-						subject {{
-							__typename 
-							... on Issue {{
-  								number
-							}}
-							... on PullRequest {{
-  								number
-							}}
-						}}
-					}}
-					...on DisconnectedEvent {{
-						createdAt,
-						id,
-						source {{
-							__typename,
-							... on Issue {{
-  								number
-							}}
-							... on PullRequest {{
-  								number,
-                                author {{
-                                    avatarUrl,
-                                    resourcePath,
-                                }}
-							}}
-						}},
-						subject {{
-							__typename 
-							... on Issue {{
-  								number
-							}}
-							... on PullRequest {{
-  								number
-							}}
-						}}
-					}}
-				}}
-			}}
-		}}";
-
-        private const string CONNECT_AND_DISCONNECT_EVENTS_GRAPHQL_QUERY = @"
-query ConnectAndDisconnectEvents($repoName: String!, $repoOwner: String!, $issueNumber: Int!, $pageSize: Int!) {{
-	repository(name: $repoName, owner: $repoOwner) {{
-		{0},
-		{1}
-	}}
-}}";
+        private const string CLOSING_ISSUES_AND_PULLREQUESTS_GRAPHQL_QUERY = @"
+        query ClosingIssuesAndPullRequests($repoName: String!, $repoOwner: String!, $issueNumber: Int!, $pageSize: Int!) {
+	        repository(name: $repoName, owner: $repoOwner) {
+                issue(number: $issueNumber) {
+                    title
+                    id
+                    number
+                    url
+                    labels(first: 100) {
+                        nodes {
+                            name
+                            color
+                            description
+                        }
+                    }
+                    author {
+                        login
+                        avatarUrl
+                        resourcePath
+                    }
+                    closedByPullRequestsReferences(includeClosedPrs: true, first: $pageSize) {
+                        nodes {
+                            number
+                            id
+                            title
+                            author {
+                                login
+                                avatarUrl
+                                resourcePath
+                            }
+                        }
+                    }
+                }
+                pullRequest(number: $issueNumber) {
+                    number
+                    title
+                    closingIssuesReferences(first: $pageSize) {
+                        nodes {
+                            number
+                            title
+                            author {
+                                login
+                                avatarUrl
+                                resourcePath
+                            }
+                        }
+                    }
+                }
+    	    }
+        }";
 
         private readonly IGitHubClient _gitHubClient;
         private readonly IMapper _mapper;
@@ -439,13 +425,11 @@ query ConnectAndDisconnectEvents($repoName: String!, $repoOwner: String!, $issue
 
         public async Task<IEnumerable<Issue>> GetLinkedIssuesAsync(string owner, string repository, Issue issue)
         {
-            var graphQLQuery = string.Format(CultureInfo.InvariantCulture, CONNECT_AND_DISCONNECT_EVENTS_GRAPHQL_QUERY,
-                    string.Format(CultureInfo.InvariantCulture, CONNECT_AND_DISCONNECT_EVENTS_GRAPHQL_QUERY_FRAGMENT, "issue"),
-                    string.Format(CultureInfo.InvariantCulture, CONNECT_AND_DISCONNECT_EVENTS_GRAPHQL_QUERY_FRAGMENT, "pullRequest"));
+            ArgumentNullException.ThrowIfNull(issue, nameof(issue));
 
             var request = new GraphQLHttpRequest
             {
-                Query = graphQLQuery.Replace("\r\n", string.Empty),
+                Query = CLOSING_ISSUES_AND_PULLREQUESTS_GRAPHQL_QUERY.Replace("\r\n", string.Empty, StringComparison.OrdinalIgnoreCase),
                 Variables = new
                 {
                     pageSize = PAGE_SIZE,
@@ -458,50 +442,19 @@ query ConnectAndDisconnectEvents($repoName: String!, $repoOwner: String!, $issue
             var graphQLResponse = await _graphQLClient.SendQueryAsync<dynamic>(request).ConfigureAwait(false);
 
             var rootNode = (JsonElement)graphQLResponse.Data;
-            var issueNode = rootNode.GetJsonElement("repository.issue");
-            if (issueNode.ValueKind == JsonValueKind.Null || issueNode.ValueKind == JsonValueKind.Undefined)
-            {
-                issueNode = rootNode.GetJsonElement("repository.pullRequest");
-            }
+            var issueNode = rootNode.GetFirstJsonElement(new[] { "repository.issue", "repository.pullRequest" });
 
             if (issueNode.ValueKind == JsonValueKind.Null || issueNode.ValueKind == JsonValueKind.Undefined)
             {
                 throw new NotFoundException($"Unable to find issue/pull request {issue.PublicNumber}");
             }
 
-            var nodes = issueNode.GetJsonElement("timelineItems.nodes");
-            var sortedNodes = nodes.EnumerateArray().OrderBy(n => n.GetJsonElement("createdAt").GetDateTime());
-            var connectedEvents = sortedNodes.Where(n => n.GetJsonElement("__typename").GetString() == "ConnectedEvent").ToArray();
-            var disconnectedEvents = sortedNodes.Where(n => n.GetJsonElement("__typename").GetString() == "DisconnectedEvent").ToArray();
-
-            if (!connectedEvents.Any())
-            {
-                return Enumerable.Empty<Issue>();
-            }
+            var nodes = issueNode.GetFirstJsonElement(new[] { "closedByPullRequestsReferences.nodes", "closingIssuesReferences.nodes" });
 
             var linkedIssues = new List<Issue>();
-            foreach (var connectEvent in connectedEvents)
+            foreach (var node in nodes.EnumerateArray())
             {
-                var linkedIssueNumber = connectEvent.GetJsonElement("subject.number").GetInt32();
-                var correspondingDisconnectEvent = disconnectedEvents
-                    .FirstOrDefault(e =>
-                        e.GetJsonElement("subject.number").GetInt32() == linkedIssueNumber &&
-                        e.GetJsonElement("createdAt").GetDateTime() >= connectEvent.GetJsonElement("createdAt").GetDateTime());
-
-                if (correspondingDisconnectEvent.ValueKind == JsonValueKind.Null || correspondingDisconnectEvent.ValueKind == JsonValueKind.Undefined)
-                {
-                    var linkedIssue = await _gitHubClient.Issue.Get(owner, repository, linkedIssueNumber).ConfigureAwait(false);
-                    linkedIssues.Add(_mapper.Map<Issue>(linkedIssue));
-                }
-                else if (correspondingDisconnectEvent.GetJsonElement("createdAt").GetDateTime() >= connectEvent.GetJsonElement("createdAt").GetDateTime())
-                {
-                    continue;
-                }
-                else
-                {
-                    var linkedIssue = await _gitHubClient.Issue.Get(owner, repository, linkedIssueNumber).ConfigureAwait(false);
-                    linkedIssues.Add(_mapper.Map<Issue>(linkedIssue));
-                }
+                linkedIssues.Add(_mapper.Map<Issue>(node));
             }
 
             return linkedIssues;
