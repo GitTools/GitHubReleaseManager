@@ -403,9 +403,8 @@ namespace GitReleaseManager.Core.Provider
                 }
                 else
                 {
-                    var closedBy = _gitLabClient.Issues.ClosedBy(GetGitLabProjectId(owner, repository), issue.PublicNumber);
                     var relatedTo = _gitLabClient.Issues.RelatedTo(GetGitLabProjectId(owner, repository), issue.PublicNumber);
-                    var issues = _mapper.Map<IEnumerable<Issue>>(closedBy);
+                    var issues = _mapper.Map<IEnumerable<Issue>>(relatedTo);
                     return Task.FromResult(issues);
                 }
             });
