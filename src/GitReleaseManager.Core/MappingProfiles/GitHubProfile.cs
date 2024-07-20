@@ -40,8 +40,7 @@ namespace GitReleaseManager.Core.MappingProfiles
                 .ForMember(dest => dest.HtmlUrl, act => act.MapFrom(src => src.GetProperty("url").GetString()))
                 .ForMember(dest => dest.IsPullRequest, act => act.MapFrom(src => src.GetProperty("url").GetString().Contains("/pull/", StringComparison.OrdinalIgnoreCase)))
                 .ForMember(dest => dest.User, act => act.MapFrom(src => src.GetProperty("author")))
-                .ForMember(dest => dest.Labels, act => act.MapFrom(src => src.GetProperty("labels")))
-                .ForMember(dest => dest.LinkedIssues, act => act.MapFrom(src => src.GetProperty("linked_issues")))
+                .ForMember(dest => dest.Labels, act => act.MapFrom(src => src.GetJsonElement("labels.nodes").EnumerateArray()))
                 .ReverseMap();
 
             CreateMap<JsonElement, Model.Label>()
@@ -52,7 +51,7 @@ namespace GitReleaseManager.Core.MappingProfiles
 
             CreateMap<JsonElement, Model.User>()
                 .ForMember(dest => dest.Login, act => act.MapFrom(src => src.GetProperty("login").GetString()))
-                .ForMember(dest => dest.HtmlUrl, act => act.MapFrom(src => src.GetProperty("resourcePath").GetString()))
+                .ForMember(dest => dest.HtmlUrl, act => act.MapFrom(src => $"https://github.com{src.GetProperty("resourcePath").GetString()}")) // The resourcePath contains a value similar to "/jericho". That's why we must manually prepend "https://github.com
                 .ForMember(dest => dest.AvatarUrl, act => act.MapFrom(src => src.GetProperty("avatarUrl").GetString()))
                 .ReverseMap();
         }

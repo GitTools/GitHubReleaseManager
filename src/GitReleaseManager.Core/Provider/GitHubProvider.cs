@@ -8,7 +8,6 @@ using AutoMapper;
 using GitReleaseManager.Core.Extensions;
 using GraphQL.Client.Abstractions;
 using GraphQL.Client.Http;
-using GraphQL.Client.Serializer.SystemTextJson;
 using Octokit;
 using ApiException = GitReleaseManager.Core.Exceptions.ApiException;
 using ForbiddenException = GitReleaseManager.Core.Exceptions.ForbiddenException;
@@ -53,11 +52,19 @@ namespace GitReleaseManager.Core.Provider
                         avatarUrl
                         resourcePath
                     }
-                    closedByPullRequestsReferences(includeClosedPrs: true, first: $pageSize) {
+                    closedByPullRequestsReferences(userLinkedOnly: false, includeClosedPrs: true, first: $pageSize) {
                         nodes {
-                            number
-                            id
                             title
+                            id
+                            number
+                            url
+                            labels(first: 100) {
+                                nodes {
+                                    name
+                                    color
+                                    description
+                                }
+                            }
                             author {
                                 login
                                 avatarUrl
@@ -69,10 +76,19 @@ namespace GitReleaseManager.Core.Provider
                 pullRequest(number: $issueNumber) {
                     number
                     title
-                    closingIssuesReferences(first: $pageSize) {
+                    closingIssuesReferences(userLinkedOnly: false, first: $pageSize) {
                         nodes {
-                            number
                             title
+                            id
+                            number
+                            url
+                            labels(first: 100) {
+                                nodes {
+                                    name
+                                    color
+                                    description
+                                }
+                            }
                             author {
                                 login
                                 avatarUrl
@@ -92,13 +108,11 @@ namespace GitReleaseManager.Core.Provider
         {
             _gitHubClient = gitHubClient;
             _mapper = mapper;
+        }
 
-            var graphQLClient = new GraphQLHttpClient(new GraphQLHttpClientOptions { EndPoint = new Uri("https://api.github.com/graphql") }, new SystemTextJsonSerializer());
-            if (!string.IsNullOrEmpty(_gitHubClient?.Connection?.Credentials?.Password))
-            {
-                graphQLClient.HttpClient.DefaultRequestHeaders.Add("Authorization", $"bearer {_gitHubClient.Connection.Credentials.Password}");
-            }
-
+        public GitHubProvider(IGitHubClient gitHubClient, IMapper mapper, IGraphQLClient graphQLClient)
+            : this(gitHubClient, mapper)
+        {
             _graphQLClient = graphQLClient;
         }
 
@@ -423,8 +437,9 @@ namespace GitReleaseManager.Core.Provider
             return issue.IsPullRequest ? "Pull Request" : "Issue";
         }
 
-        public async Task<IEnumerable<Issue>> GetLinkedIssuesAsync(string owner, string repository, Issue issue)
+        public async Task<Issue[]> GetLinkedIssuesAsync(string owner, string repository, Issue issue)
         {
+            ArgumentNullException.ThrowIfNull(_graphQLClient, nameof(_graphQLClient));
             ArgumentNullException.ThrowIfNull(issue, nameof(issue));
 
             var request = new GraphQLHttpRequest
@@ -441,21 +456,16 @@ namespace GitReleaseManager.Core.Provider
 
             var graphQLResponse = await _graphQLClient.SendQueryAsync<dynamic>(request).ConfigureAwait(false);
 
-            var rootNode = (JsonElement)graphQLResponse.Data;
-            var issueNode = rootNode.GetFirstJsonElement(new[] { "repository.issue", "repository.pullRequest" });
-
-            if (issueNode.ValueKind == JsonValueKind.Null || issueNode.ValueKind == JsonValueKind.Undefined)
+            var nodes = ((JsonElement)graphQLResponse.Data).GetFirstJsonElement(new[]
             {
-                throw new NotFoundException($"Unable to find issue/pull request {issue.PublicNumber}");
-            }
+                "repository.issue.closedByPullRequestsReferences.nodes", // If issue.PublicNumber represents an issue, retrieve the linked PRs
+                "repository.pullRequest.closingIssuesReferences.nodes", // If issue.PublicNumber represents a PR, retrieve the linked issues
+            });
 
-            var nodes = issueNode.GetFirstJsonElement(new[] { "closedByPullRequestsReferences.nodes", "closingIssuesReferences.nodes" });
-
-            var linkedIssues = new List<Issue>();
-            foreach (var node in nodes.EnumerateArray())
-            {
-                linkedIssues.Add(_mapper.Map<Issue>(node));
-            }
+            using var enumerator = nodes.EnumerateArray();
+            var linkedIssues = enumerator
+                .Select(element => _mapper.Map<Issue>(element))
+                .ToArray();
 
             return linkedIssues;
         }

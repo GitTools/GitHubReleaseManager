@@ -71,11 +71,22 @@ namespace GitReleaseManager.Core.ReleaseNotes
 
             foreach (var issue in distinctValidIssues)
             {
-                var linkedIssues = await _vcsProvider.GetLinkedIssuesAsync(_user, _repository, issue).ConfigureAwait(false);
-                issue.LinkedIssues = linkedIssues?.ToList().AsReadOnly() ?? Array.AsReadOnly(Array.Empty<Issue>());
+                // Linked issues are only necessary for figuring out who contributed to a given issue.
+                // Therefore, we only need to fetch linked issues if IncludeContributors is enabled.
+                if (_configuration.Create.IncludeContributors)
+                {
+                    var linkedIssues = await _vcsProvider.GetLinkedIssuesAsync(_user, _repository, issue).ConfigureAwait(false);
+                    issue.LinkedIssues = Array.AsReadOnly(linkedIssues ?? Array.Empty<Issue>());
+                }
+                else
+                {
+                    issue.LinkedIssues = Array.AsReadOnly(Array.Empty<Issue>());
+                }
             }
 
-            var contributors = GetContributors(distinctValidIssues);
+            var contributors = _configuration.Create.IncludeContributors
+                ? GetContributors(distinctValidIssues)
+                : Array.Empty<User>();
 
             var milestoneQueryString = _vcsProvider.GetMilestoneQueryString();
 
@@ -88,7 +99,7 @@ namespace GitReleaseManager.Core.ReleaseNotes
                 },
                 Contributors = new
                 {
-                    Count = contributors.Count,
+                    Count = contributors.Length,
                     Items = contributors,
                 },
                 Commits = new
@@ -128,7 +139,7 @@ namespace GitReleaseManager.Core.ReleaseNotes
             return issuesByLabel;
         }
 
-        private static List<User> GetContributors(IEnumerable<Issue> issues)
+        private static User[] GetContributors(IEnumerable<Issue> issues)
         {
             var contributors = issues.Select(i => i.User);
             var linkedContributors = issues.SelectMany(i => i.LinkedIssues).Select(i => i.User);
@@ -137,7 +148,7 @@ namespace GitReleaseManager.Core.ReleaseNotes
                 .Union(linkedContributors)
                 .Where(u => u != null)
                 .DistinctBy(u => u.Login)
-                .ToList();
+                .ToArray();
 
             return allContributors;
         }

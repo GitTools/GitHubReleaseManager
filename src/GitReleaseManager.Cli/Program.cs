@@ -13,6 +13,8 @@ using GitReleaseManager.Core.Options;
 using GitReleaseManager.Core.Provider;
 using GitReleaseManager.Core.ReleaseNotes;
 using GitReleaseManager.Core.Templates;
+using GraphQL.Client.Http;
+using GraphQL.Client.Serializer.SystemTextJson;
 using Microsoft.Extensions.DependencyInjection;
 using NGitLab;
 using Octokit;
@@ -211,6 +213,12 @@ namespace GitReleaseManager.Cli
                 // default to Github
                 serviceCollection
                     .AddSingleton<IGitHubClient>((_) => new GitHubClient(new ProductHeaderValue("GitReleaseManager")) { Credentials = new Credentials(vcsOptions.Token) })
+                    .AddSingleton<GraphQL.Client.Abstractions.IGraphQLClient>(_ =>
+                    {
+                        var client = new GraphQLHttpClient(new GraphQLHttpClientOptions { EndPoint = new Uri("https://api.github.com/graphql") }, new SystemTextJsonSerializer());
+                        client.HttpClient.DefaultRequestHeaders.Add("Authorization", $"bearer {vcsOptions.Token}");
+                        return client;
+                    })
                     .AddSingleton<IVcsProvider, GitHubProvider>();
             }
         }
