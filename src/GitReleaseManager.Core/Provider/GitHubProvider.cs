@@ -227,7 +227,7 @@ namespace GitReleaseManager.Core.Provider
         {
             return GitHubProvider.ExecuteAsync(async () =>
             {
-                var update = new MilestoneUpdate { State = (Octokit.ItemState)itemState };
+                var update = new MilestoneUpdate { State = (Octokit.ItemState)itemState, DueOn = milestone.DueOn };
                 await _gitHubClient.Issue.Milestone.Update(owner, repository, milestone.PublicNumber, update).ConfigureAwait(false);
             });
         }

@@ -267,6 +267,11 @@ namespace GitReleaseManager.Core.Provider
                 }
                 else if (itemState == ItemState.Closed)
                 {
+                    if (milestone.DueOn.HasValue)
+                    {
+                        mileStoneClient.Update(milestone.InternalNumber, new MilestoneUpdate { DueDate = milestone.DueOn.Value.ToString("o", CultureInfo.InvariantCulture) });
+                    }
+
                     mileStoneClient.Close(milestone.InternalNumber);
                 }
 
