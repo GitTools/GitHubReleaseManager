@@ -58,7 +58,7 @@ namespace GitReleaseManager.Core.ReleaseNotes
 
             var numberOfCommits = await _vcsProvider.GetCommitsCountAsync(_user, _repository, @base, head).ConfigureAwait(false);
 
-            if (issues.Count == 0)
+            if (issues.Count == 0 && !_configuration.Create.AllowMilestonesWithoutIssues)
             {
                 var logMessage = string.Format(CultureInfo.CurrentCulture, "No closed issues have been found for milestone {0}, or all assigned issues are meant to be excluded from release notes, aborting release creation.", _milestoneTitle);
                 throw new InvalidOperationException(logMessage);
