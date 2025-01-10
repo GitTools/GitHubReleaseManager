@@ -3,12 +3,9 @@
     <Import Project="$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v16.0\TextTemplating\Microsoft.TextTemplating.targets" Condition="Exists('$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v16.0\TextTemplating\Microsoft.TextTemplating.targets')" />
     <Import Project="$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v15.0\TextTemplating\Microsoft.TextTemplating.targets" Condition="Exists('$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v15.0\TextTemplating\Microsoft.TextTemplating.targets')" />
     <PropertyGroup>
-        <LangVersion>8.0</LangVersion>
-        <TargetFrameworks>net6.0;net7.0</TargetFrameworks>
         <Title>GitReleaseManager.Core</Title>
         <Description>Create release notes in markdown given a milestone</Description>
         <IsPackable>false</IsPackable>
-        <NoWarn>$(NoWarn);CA1707;</NoWarn>
         <TransformOnBuild>true</TransformOnBuild>
     </PropertyGroup>
 

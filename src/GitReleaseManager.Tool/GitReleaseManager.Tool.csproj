@@ -1,25 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <LangVersion>8.0</LangVersion>
         <OutputType>Exe</OutputType>
         <AssemblyName>GitReleaseManager</AssemblyName>
         <PackAsTool>true</PackAsTool>
-        <TargetFrameworks>net6.0;net7.0</TargetFrameworks>
         <ToolCommandName>dotnet-gitreleasemanager</ToolCommandName>
         <PackageId>GitReleaseManager.Tool</PackageId>
         <Title>GitReleaseManager Tool</Title>
-        <Authors>GitTools Contributors</Authors>
-        <PackageProjectUrl>https://github.com/GitTools/GitReleaseManager</PackageProjectUrl>
-        <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-        <PackageTags>github release notes create export</PackageTags>
         <Description>Tool for creating and exporting releases for software applications from online Version Control Systems</Description>
-        <Copyright>Copyright (c) 2015 - Present - GitTools Contributors</Copyright>
-        <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <PackageIcon>package_icon.png</PackageIcon>
-        <PackageReleaseNotes>https://github.com/GitTools/GitReleaseManager/releases</PackageReleaseNotes>
-        <RepositoryType>git</RepositoryType>
-        <RepositoryUrl>https://github.com/GitTools/GitReleaseManager.git</RepositoryUrl>
-        <NoWarn>$(NoWarn);CA1707;</NoWarn>
     </PropertyGroup>
     <ItemGroup>
         <Compile Include="../GitReleaseManager.Cli/**/*.cs" Exclude="../GitReleaseManager.Cli/obj/**/*.*;../GitReleaseManager.Cli/bin/**/*.*" />

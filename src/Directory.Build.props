@@ -1,8 +1,22 @@
 <Project>
     <PropertyGroup>
+        <LangVersion>8.0</LangVersion>
+        <TargetFrameworks>net6.0;net7.0</TargetFrameworks>
+
+        <Authors>GitTools Contributors</Authors>
+        <PackageProjectUrl>https://github.com/GitTools/GitReleaseManager</PackageProjectUrl>
+        <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+        <PackageTags>github release notes create export</PackageTags>
+        <Copyright>Copyright (c) 2015 - Present - GitTools Contributors</Copyright>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageIcon>package_icon.png</PackageIcon>
+        <PackageReleaseNotes>https://github.com/GitTools/GitReleaseManager/releases</PackageReleaseNotes>
+        <RepositoryType>git</RepositoryType>
+        <RepositoryUrl>https://github.com/GitTools/GitReleaseManager.git</RepositoryUrl>
+
         <DebugType>pdbonly</DebugType>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <NoWarn>CS1591</NoWarn>
+        <NoWarn>$(NoWarn);CS1591;CA1707;Serilog004</NoWarn>
         <AnalysisMode>AllEnabledByDefault</AnalysisMode>
     </PropertyGroup>
 

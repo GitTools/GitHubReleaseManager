@@ -1,16 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <LangVersion>8.0</LangVersion>
         <OutputType>Exe</OutputType>
         <AssemblyName>GitReleaseManager</AssemblyName>
-        <TargetFrameworks>net6.0</TargetFrameworks>
         <PublishSingleFile>true</PublishSingleFile>
         <SelfContained>true</SelfContained>
         <RuntimeIdentifier>win-x64</RuntimeIdentifier>
         <Title>GitReleaseManager.Cli</Title>
         <Description>Create release notes in markdown given a milestone</Description>
         <IsPackable>false</IsPackable>
-        <NoWarn>$(NoWarn);CA1707;</NoWarn>
     </PropertyGroup>
     <ItemGroup>
         <ProjectReference Include="..\GitReleaseManager.Core\GitReleaseManager.Core.csproj" />

@@ -1,10 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <LangVersion>9.0</LangVersion>
-        <TargetFrameworks>net6.0;net7.0</TargetFrameworks>
         <Title>GitReleaseManager.Core.Tests</Title>
         <Description>Test Project for GitReleaseManager.Core</Description>
-        <NoWarn>$(NoWarn);CA1707;Serilog004;</NoWarn>
     </PropertyGroup>
     <ItemGroup>
         <Compile Include="..\GlobalSuppressions.cs" Link="GlobalSuppressions.cs" />
