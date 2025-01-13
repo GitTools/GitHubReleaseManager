@@ -4,6 +4,8 @@
     <Import Project="$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v15.0\TextTemplating\Microsoft.TextTemplating.targets" Condition="Exists('$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v15.0\TextTemplating\Microsoft.TextTemplating.targets')" />
     <PropertyGroup>
         <LangVersion>8.0</LangVersion>
+        <!-- Uncomment the below property when langversion is updated to 9.0 or higher (optimally 11.0). -->
+        <!--<DefineConstants>$(DefineConstants);USE_GENERATED_REGEX</DefineConstants>-->
         <TargetFrameworks>net6.0;net7.0</TargetFrameworks>
         <Title>GitReleaseManager.Core</Title>
         <Description>Create release notes in markdown given a milestone</Description>

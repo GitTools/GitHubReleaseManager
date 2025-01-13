@@ -43,6 +43,8 @@ namespace GitReleaseManager.Core.Provider
             _logger = logger;
         }
 
+        public string Name => "GitLab";
+
         public Task DeleteAssetAsync(string owner, string repository, ReleaseAsset asset)
         {
             // TODO: This is a discussion here:

@@ -110,6 +110,11 @@ namespace GitReleaseManager.Cli
                 RegisterVcsProvider(vcsOptions, serviceCollection);
             }
 
+            if (options is CreateSubOptions createOptions && !string.IsNullOrEmpty(createOptions.OutputPath))
+            {
+                configuration.Create.AllowUpdateToPublishedRelease = false;
+            }
+
             serviceCollection = serviceCollection
                 .AddTransient((services) => new TemplateFactory(services.GetRequiredService<IFileSystem>(), services.GetRequiredService<Config>(), TemplateKind.Create));
 
@@ -197,21 +202,53 @@ namespace GitReleaseManager.Cli
         private static void LogOptions(BaseSubOptions options)
             => Log.Debug("{@Options}", options);
 
+        private static void RegisterKeyedVcsProvider<TVcsImplementation>(object provider, IServiceCollection serviceCollection)
+            where TVcsImplementation : class, IVcsProvider
+        {
+            static IVcsProvider ResolveService(IServiceProvider service, object key) => service.GetRequiredKeyedService<IVcsProvider>(key);
+
+            provider ??= "null";
+
+            Log.Debug("Registering {Type} with Service Key {Key}", typeof(IVcsProvider), provider);
+
+            if (typeof(TVcsImplementation) != typeof(NullReleasesProvider))
+            {
+                serviceCollection.AddKeyedSingleton<IVcsProvider, TVcsImplementation>(provider);
+            }
+
+            serviceCollection
+                .AddKeyedTransient<IAssetsProvider>(provider, ResolveService)
+                .AddKeyedTransient<ICommitsProvider>(provider, ResolveService)
+                .AddKeyedTransient<IIssuesProvider>(provider, ResolveService)
+                .AddKeyedTransient<IMilestonesProvider>(provider, ResolveService)
+                .AddKeyedTransient<IReleasesProvider>(provider, ResolveService);
+        }
+
         private static void RegisterVcsProvider(BaseVcsOptions vcsOptions, IServiceCollection serviceCollection)
         {
             Log.Information("Using {Provider} as VCS Provider", vcsOptions.Provider);
-            if (vcsOptions.Provider == VcsProvider.GitLab)
+
+            serviceCollection.AddKeyedSingleton<IVcsProvider>("null", (service, _) => new NullReleasesProvider(vcsOptions.Provider.ToString(), service.GetRequiredService<ILogger>()));
+            RegisterKeyedVcsProvider<NullReleasesProvider>(null, serviceCollection);
+            RegisterKeyedVcsProvider<GitHubProvider>(VcsProvider.GitHub, serviceCollection);
+
+            serviceCollection
+                .AddSingleton<IGitLabClient>((_) => new GitLabClient("https://gitlab.com", vcsOptions.Token));
+
+            serviceCollection
+                .AddSingleton<IGitHubClient>((_) => new GitHubClient(new ProductHeaderValue("GitReleaseManager")) { Credentials = new Credentials(vcsOptions.Token) });
+
+            serviceCollection.AddTransient((service) => service.GetKeyedService<IVcsProvider>(vcsOptions.Provider) ?? service.GetRequiredKeyedService<IVcsProvider>("null"));
+
+            if (vcsOptions is CreateSubOptions createOptions && !string.IsNullOrEmpty(createOptions.OutputPath))
             {
-                serviceCollection
-                    .AddSingleton<IGitLabClient>((_) => new GitLabClient("https://gitlab.com", vcsOptions.Token))
-                    .AddSingleton<IVcsProvider, GitLabProvider>();
+                serviceCollection.AddSingleton<IReleasesProvider>((service) => new LocalProvider(
+                    service.GetRequiredService<IFileSystem>(),
+                    createOptions.OutputPath));
             }
             else
             {
-                // default to Github
-                serviceCollection
-                    .AddSingleton<IGitHubClient>((_) => new GitHubClient(new ProductHeaderValue("GitReleaseManager")) { Credentials = new Credentials(vcsOptions.Token) })
-                    .AddSingleton<IVcsProvider, GitHubProvider>();
+                serviceCollection.AddTransient((service) => service.GetKeyedService<IReleasesProvider>(vcsOptions.Provider) ?? service.GetRequiredKeyedService<IReleasesProvider>("null"));
             }
         }
     }

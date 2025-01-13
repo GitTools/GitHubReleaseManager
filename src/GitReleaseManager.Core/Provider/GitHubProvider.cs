@@ -35,6 +35,8 @@ namespace GitReleaseManager.Core.Provider
             _mapper = mapper;
         }
 
+        public string Name => "GitHub";
+
         public Task DeleteAssetAsync(string owner, string repository, ReleaseAsset asset)
         {
             return GitHubProvider.ExecuteAsync(async () =>

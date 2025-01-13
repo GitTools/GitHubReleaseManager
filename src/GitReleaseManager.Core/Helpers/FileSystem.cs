@@ -19,6 +19,21 @@ namespace GitReleaseManager.Core.Helpers
             File.Copy(@source, destination, overwrite);
         }
 
+        public void CreateDirectory(string path)
+        {
+            // It is safe to call CreateDirectory, if the directory
+            // already exists these are no-op.
+
+            if (string.IsNullOrEmpty(path))
+            {
+                Directory.CreateDirectory(Environment.CurrentDirectory);
+            }
+            else
+            {
+                Directory.CreateDirectory(path);
+            }
+        }
+
         public void Move(string @source, string destination)
         {
             File.Move(@source, destination);
@@ -59,9 +74,19 @@ namespace GitReleaseManager.Core.Helpers
             return Directory.GetFiles(directory, searchPattern, searchOption);
         }
 
+        public Stream OpenRead(string path)
+        {
+            return File.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        }
+
         public Stream OpenWrite(string path)
         {
-            return File.OpenWrite(path);
+            return OpenWrite(path, overwrite: false);
+        }
+
+        public Stream OpenWrite(string path, bool overwrite)
+        {
+            return File.Open(path, overwrite ? FileMode.Create : FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
         }
     }
 }

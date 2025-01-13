@@ -7,6 +7,8 @@ namespace GitReleaseManager.Core.Helpers
     {
         void Copy(string source, string destination, bool overwrite);
 
+        void CreateDirectory(string path);
+
         void Move(string source, string destination);
 
         bool Exists(string file);
@@ -21,6 +23,9 @@ namespace GitReleaseManager.Core.Helpers
 
         IEnumerable<string> DirectoryGetFiles(string directory, string searchPattern, SearchOption searchOption);
 
+        Stream OpenRead(string path);
+
         Stream OpenWrite(string path);
+        Stream OpenWrite(string path, bool overwrite);
     }
 }

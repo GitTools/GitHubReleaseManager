@@ -29,5 +29,8 @@ namespace GitReleaseManager.Core.Options
 
         [Option("allowEmpty", Required = false, HelpText = "Allow the creation of an empty set of release notes. In this mode, milestone and input file path will be ignored.")]
         public bool AllowEmpty { get; set; }
+
+        [Option("output", Required = false, HelpText = "The path to a local file location where the release notes will be created, instead of creating in remotely on the specified provider.")]
+        public string OutputPath { get; set; }
     }
 }
