@@ -19,6 +19,8 @@
     <ItemGroup>
         <PackageReference Include="CommandLineParser" />
         <PackageReference Include="Destructurama.Attributed" />
+        <PackageReference Include="GraphQL.Client" />
+        <PackageReference Include="GraphQL.Client.Serializer.SystemTextJson" />
         <PackageReference Include="Microsoft.SourceLink.GitHub">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>

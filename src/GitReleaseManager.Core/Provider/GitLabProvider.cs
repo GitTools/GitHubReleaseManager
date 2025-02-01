@@ -391,6 +391,25 @@ namespace GitReleaseManager.Core.Provider
             return issue.IsPullRequest ? "Merge Request" : "Issue";
         }
 
+        public Task<Issue[]> GetLinkedIssuesAsync(string owner, string repository, Issue issue)
+        {
+            return ExecuteAsync(() =>
+            {
+                if (issue.IsPullRequest)
+                {
+                    var closes = _gitLabClient.MergeRequests.ClosesIssues(issue.PublicNumber);
+                    var issues = _mapper.Map<IEnumerable<Issue>>(closes);
+                    return Task.FromResult(issues.ToArray());
+                }
+                else
+                {
+                    var relatedTo = _gitLabClient.Issues.RelatedTo(GetGitLabProjectId(owner, repository), issue.PublicNumber);
+                    var issues = _mapper.Map<IEnumerable<Issue>>(relatedTo);
+                    return Task.FromResult(issues.ToArray());
+                }
+            });
+        }
+
         private long GetGitLabProjectId(string owner, string repository)
         {
             if (_projectId.HasValue)

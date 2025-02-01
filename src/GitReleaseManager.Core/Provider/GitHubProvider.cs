@@ -2,8 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using AutoMapper;
+using GitReleaseManager.Core.Extensions;
+using GraphQL.Client.Abstractions;
+using GraphQL.Client.Http;
 using Octokit;
 using ApiException = GitReleaseManager.Core.Exceptions.ApiException;
 using ForbiddenException = GitReleaseManager.Core.Exceptions.ForbiddenException;
@@ -26,13 +30,90 @@ namespace GitReleaseManager.Core.Provider
         private const int PAGE_SIZE = 100;
         private const string NOT_FOUND_MESSGAE = "NotFound";
 
+        // This query fragment will be executed for issues and pull requests
+        // because we don't know whether issueNumber refers to an issue or a PR
+        private const string CLOSING_ISSUES_AND_PULLREQUESTS_GRAPHQL_QUERY = @"
+        query ClosingIssuesAndPullRequests($repoName: String!, $repoOwner: String!, $issueNumber: Int!, $pageSize: Int!) {
+	        repository(name: $repoName, owner: $repoOwner) {
+                issue(number: $issueNumber) {
+                    title
+                    id
+                    number
+                    url
+                    labels(first: 100) {
+                        nodes {
+                            name
+                            color
+                            description
+                        }
+                    }
+                    author {
+                        login
+                        avatarUrl
+                        resourcePath
+                    }
+                    closedByPullRequestsReferences(userLinkedOnly: false, includeClosedPrs: true, first: $pageSize) {
+                        nodes {
+                            title
+                            id
+                            number
+                            url
+                            labels(first: 100) {
+                                nodes {
+                                    name
+                                    color
+                                    description
+                                }
+                            }
+                            author {
+                                login
+                                avatarUrl
+                                resourcePath
+                            }
+                        }
+                    }
+                }
+                pullRequest(number: $issueNumber) {
+                    number
+                    title
+                    closingIssuesReferences(userLinkedOnly: false, first: $pageSize) {
+                        nodes {
+                            title
+                            id
+                            number
+                            url
+                            labels(first: 100) {
+                                nodes {
+                                    name
+                                    color
+                                    description
+                                }
+                            }
+                            author {
+                                login
+                                avatarUrl
+                                resourcePath
+                            }
+                        }
+                    }
+                }
+    	    }
+        }";
+
         private readonly IGitHubClient _gitHubClient;
         private readonly IMapper _mapper;
+        private readonly IGraphQLClient _graphQLClient;
 
         public GitHubProvider(IGitHubClient gitHubClient, IMapper mapper)
         {
             _gitHubClient = gitHubClient;
             _mapper = mapper;
+        }
+
+        public GitHubProvider(IGitHubClient gitHubClient, IMapper mapper, IGraphQLClient graphQLClient)
+            : this(gitHubClient, mapper)
+        {
+            _graphQLClient = graphQLClient;
         }
 
         public Task DeleteAssetAsync(string owner, string repository, ReleaseAsset asset)
@@ -354,6 +435,39 @@ namespace GitReleaseManager.Core.Provider
         public string GetIssueType(Issue issue)
         {
             return issue.IsPullRequest ? "Pull Request" : "Issue";
+        }
+
+        public async Task<Issue[]> GetLinkedIssuesAsync(string owner, string repository, Issue issue)
+        {
+            ArgumentNullException.ThrowIfNull(_graphQLClient, nameof(_graphQLClient));
+            ArgumentNullException.ThrowIfNull(issue, nameof(issue));
+
+            var request = new GraphQLHttpRequest
+            {
+                Query = CLOSING_ISSUES_AND_PULLREQUESTS_GRAPHQL_QUERY.Replace("\r\n", string.Empty, StringComparison.OrdinalIgnoreCase),
+                Variables = new
+                {
+                    pageSize = PAGE_SIZE,
+                    repoName = repository,
+                    repoOwner = owner,
+                    issueNumber = issue.PublicNumber,
+                },
+            };
+
+            var graphQLResponse = await _graphQLClient.SendQueryAsync<dynamic>(request).ConfigureAwait(false);
+
+            var nodes = ((JsonElement)graphQLResponse.Data).GetFirstJsonElement(new[]
+            {
+                "repository.issue.closedByPullRequestsReferences.nodes", // If issue.PublicNumber represents an issue, retrieve the linked PRs
+                "repository.pullRequest.closingIssuesReferences.nodes", // If issue.PublicNumber represents a PR, retrieve the linked issues
+            });
+
+            using var enumerator = nodes.EnumerateArray();
+            var linkedIssues = enumerator
+                .Select(element => _mapper.Map<Issue>(element))
+                .ToArray();
+
+            return linkedIssues;
         }
 
         private static async Task ExecuteAsync(Func<Task> action)

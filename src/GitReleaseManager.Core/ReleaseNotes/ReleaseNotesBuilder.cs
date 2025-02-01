@@ -67,6 +67,26 @@ namespace GitReleaseManager.Core.ReleaseNotes
             var commitsLink = _vcsProvider.GetCommitsUrl(_user, _repository, _targetMilestone?.Title, previousMilestone?.Title);
 
             var issuesDict = GetIssuesDict(issues);
+            var distinctValidIssues = issuesDict.SelectMany(kvp => kvp.Value).DistinctBy(i => i.PublicNumber);
+
+            foreach (var issue in distinctValidIssues)
+            {
+                // Linked issues are only necessary for figuring out who contributed to a given issue.
+                // Therefore, we only need to fetch linked issues if IncludeContributors is enabled.
+                if (_configuration.Create.IncludeContributors)
+                {
+                    var linkedIssues = await _vcsProvider.GetLinkedIssuesAsync(_user, _repository, issue).ConfigureAwait(false);
+                    issue.LinkedIssues = Array.AsReadOnly(linkedIssues ?? Array.Empty<Issue>());
+                }
+                else
+                {
+                    issue.LinkedIssues = Array.AsReadOnly(Array.Empty<Issue>());
+                }
+            }
+
+            var contributors = _configuration.Create.IncludeContributors
+                ? GetContributors(distinctValidIssues)
+                : Array.Empty<User>();
 
             var milestoneQueryString = _vcsProvider.GetMilestoneQueryString();
 
@@ -76,6 +96,11 @@ namespace GitReleaseManager.Core.ReleaseNotes
                 {
                     issues.Count,
                     Items = issuesDict,
+                },
+                Contributors = new
+                {
+                    Count = contributors.Length,
+                    Items = contributors,
                 },
                 Commits = new
                 {
@@ -112,6 +137,20 @@ namespace GitReleaseManager.Core.ReleaseNotes
                 .ToDictionary(o => GetValidLabel(o.Key, o.Count()), o => o.OrderBy(issue => issue.PublicNumber).ToList());
 
             return issuesByLabel;
+        }
+
+        private static User[] GetContributors(IEnumerable<Issue> issues)
+        {
+            var contributors = issues.Select(i => i.User);
+            var linkedContributors = issues.SelectMany(i => i.LinkedIssues).Select(i => i.User);
+
+            var allContributors = contributors
+                .Union(linkedContributors)
+                .Where(u => u != null)
+                .DistinctBy(u => u.Login)
+                .ToArray();
+
+            return allContributors;
         }
 
         private string GetValidLabel(string label, int issuesCount)
