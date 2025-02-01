@@ -17,5 +17,7 @@ namespace GitReleaseManager.Core.Model
         public string Url { get; set; }
 
         public Version Version { get; set; }
+
+        public DateTimeOffset? DueOn { get; set; }
     }
 }

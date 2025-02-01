@@ -22,5 +22,12 @@ namespace GitReleaseManager.Core.Configuration
         [Sample(":tada: This issue has been resolved in version {milestone} :tada:\n\nThe release is available on:\n\n- [NuGet package(@{milestone})](https://nuget.org/packages/{repository}/{milestone})\n- [GitHub release](https://github.com/{owner}/{repository}/releases/tag/{milestone})\n\nYour **[GitReleaseManager](https://github.com/GitTools/GitReleaseManager)** bot :package::rocket:")]
         [YamlMember(Alias = "issue-comment", ScalarStyle = YamlDotNet.Core.ScalarStyle.Literal)]
         public string IssueCommentFormat { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the due date should be set when closing the milestone.
+        /// </summary>
+        [Description("Whether to set the due date when closing the milestone.")]
+        [YamlMember(Alias = "set-due-date")]
+        public bool SetDueDate { get; set; }
     }
 }

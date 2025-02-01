@@ -254,6 +254,9 @@ namespace GitReleaseManager.Core
                 _logger.Verbose("Finding open milestone with title '{Title}' on '{Owner}/{Repository}'", milestoneTitle, owner, repository);
                 var milestone = await _vcsProvider.GetMilestoneAsync(owner, repository, milestoneTitle, ItemStateFilter.Open).ConfigureAwait(false);
 
+                // Set the due date only if configured to do so
+                milestone.DueOn = _configuration.Close.SetDueDate ? DateTimeOffset.UtcNow : (DateTimeOffset?)null;
+
                 _logger.Verbose("Closing milestone '{Title}' on '{Owner}/{Repository}'", milestoneTitle, owner, repository);
                 await _vcsProvider.SetMilestoneStateAsync(owner, repository, milestone, ItemState.Closed).ConfigureAwait(false);
 

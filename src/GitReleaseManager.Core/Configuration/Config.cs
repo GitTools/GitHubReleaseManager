@@ -42,6 +42,7 @@ Your **[GitReleaseManager](https://github.com/GitTools/GitReleaseManager)** bot 
             {
                 IssueComments = false,
                 IssueCommentFormat = ISSUE_COMMENT_FORMAT,
+                SetDueDate = false, // by default, do not set the due date to match previous behavior
             };
 
             DefaultBranch = "master";
