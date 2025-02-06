@@ -59,7 +59,7 @@ jobs:
           key: ${{ runner.os }}-tools-${{ hashFiles('recipe.cake') }}
 
       - name: Build project
-        uses: cake-build/cake-action@v2
+        uses: cake-build/cake-action@v3
         with:
           script-path: recipe.cake
           target: CI
